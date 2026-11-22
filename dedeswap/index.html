@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>DedeSwap</title>
+    <style>
+      :root {
+        --bg: #eef2ef;
+        --surface: #ffffff;
+        --surface-2: #f4f7f4;
+        --ink: #101613;
+        --muted: #5a6a60;
+        --faint: #84948a;
+        --border: #d8e0da;
+        --accent: #0a7a4b;
+        --accent-strong: #065c38;
+        --accent-soft: #e2f2e8;
+        --danger: #b3261e;
+        --danger-soft: #fbeae9;
+        --warn: #8a5a00;
+        --warn-soft: #fdf1d7;
+        --ok: #0a7a4b;
+        --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0f0c;
+          --surface: #121915;
+          --surface-2: #182019;
+          --ink: #e9f0ea;
+          --muted: #9db0a3;
+          --faint: #6e8274;
+          --border: #263329;
+          --accent: #2fbf71;
+          --accent-strong: #57d68f;
+          --accent-soft: #14301f;
+          --danger: #ff8a80;
+          --danger-soft: #3a1b18;
+          --warn: #ffcf6e;
+          --warn-soft: #33270e;
+          --ok: #2fbf71;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+      }
+      button, select, input { font: inherit; color: inherit; }
+      button, select, input[type="text"] { min-height: 44px; }
+      a { color: var(--accent); }
+      .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+        padding: 6px 0 16px;
+      }
+      .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+      .brand h1 { font-size: 26px; margin: 0; letter-spacing: -0.02em; font-weight: 800; }
+      .brand h1 .swap { color: var(--accent); }
+      .brand p { margin: 0; color: var(--muted); font-size: 13.5px; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        border: 1px solid var(--border); background: var(--surface);
+        border-radius: 999px; padding: 6px 12px; font-size: 12.5px; color: var(--muted);
+        white-space: nowrap;
+      }
+      .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
+      .pill .dot.on { background: var(--ok); }
+      .pill .dot.bad { background: var(--danger); }
+      .btn {
+        appearance: none; border: 1px solid var(--border); background: var(--surface);
+        border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer;
+        min-height: 44px;
+      }
+      .btn:hover { border-color: var(--accent); }
+      .btn:disabled { opacity: .45; cursor: not-allowed; }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .btn.primary { color: #06130b; } }
+      .btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+      .btn.big { width: 100%; padding: 14px; font-size: 16.5px; border-radius: 12px; }
+      .btn.ghost { background: transparent; }
+
+      .netline {
+        display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+        font-size: 13px; color: var(--muted); padding: 0 0 16px;
+      }
+      .netline .mono { font-family: var(--mono); font-size: 12.5px; }
+      .netline .err { color: var(--danger); }
+
+      /* ---------- layout ---------- */
+      .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+      @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+      .card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 14px; padding: 18px;
+      }
+      .card h2 { font-size: 15px; margin: 0; letter-spacing: .01em; }
+      .card .head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+      .card .head .spacer { margin-left: auto; }
+      .small { font-size: 12.5px; color: var(--muted); }
+      .tiny { font-size: 11.5px; color: var(--faint); }
+      .mono { font-family: var(--mono); }
+
+      /* ---------- venue list ---------- */
+      .venue {
+        display: block; width: 100%; text-align: left; cursor: pointer;
+        border: 1px solid var(--border); background: var(--surface-2);
+        border-radius: 12px; padding: 12px 14px; margin: 0 0 8px;
+      }
+      .venue:hover { border-color: var(--accent); }
+      .venue.selected { border-color: var(--accent); background: var(--accent-soft); }
+      .venue .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .venue .pair { font-weight: 700; font-size: 15.5px; }
+      .venue .row2 { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+      .tag {
+        font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+        border-radius: 6px; padding: 2px 7px; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      }
+      .tag.live { color: var(--ok); border-color: var(--ok); }
+      .tag.ro { color: var(--warn); border-color: var(--warn); }
+      .venue .addr { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+
+      /* ---------- swap panel ---------- */
+      .field { margin-bottom: 12px; }
+      .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+      .tokenrow { display: flex; gap: 8px; }
+      .tokenrow select {
+        flex: 0 1 46%; border: 1px solid var(--border); background: var(--surface-2);
+        border-radius: 10px; padding: 8px 10px; font-weight: 600; min-width: 0;
+      }
+      .tokenrow input {
+        flex: 1 1 auto; min-width: 0; border: 1px solid var(--border); background: var(--surface-2);
+        border-radius: 10px; padding: 8px 12px; font-size: 18px; font-family: var(--mono); text-align: right;
+      }
+      .tokenrow input[readonly] { color: var(--muted); }
+      .balrow { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+      .balrow button {
+        border: none; background: none; color: var(--accent); font-weight: 700; cursor: pointer;
+        padding: 4px 6px; min-height: 32px; font-size: 12.5px;
+      }
+      .fliprow { display: flex; justify-content: center; margin: -2px 0 10px; }
+      .flip {
+        width: 40px; height: 40px; min-height: 40px; border-radius: 50%;
+        border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 17px; line-height: 1;
+      }
+      .flip:hover { border-color: var(--accent); color: var(--accent); }
+      .slip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+      .slip button {
+        border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px;
+        padding: 6px 12px; cursor: pointer; font-weight: 600; min-height: 40px;
+      }
+      .slip button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .slip button.on { color: #06130b; } }
+      .slip input {
+        width: 84px; border: 1px solid var(--border); background: var(--surface-2);
+        border-radius: 8px; padding: 6px 10px; font-family: var(--mono); min-height: 40px;
+      }
+      dl.quote { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 16px; font-size: 13.5px; }
+      dl.quote dt { color: var(--muted); }
+      dl.quote dd { margin: 0; text-align: right; font-family: var(--mono); font-size: 13px; word-break: break-all; }
+      .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+      .notice { border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin: 0 0 12px; }
+      .notice.warn { background: var(--warn-soft); color: var(--warn); }
+      .notice.err { background: var(--danger-soft); color: var(--danger); }
+      .notice.info { background: var(--accent-soft); color: var(--ink); }
+      .hidden { display: none !important; }
+
+      /* ---------- status log ---------- */
+      .log { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+      .log li { padding: 7px 0; border-bottom: 1px dashed var(--border); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+      .log li:last-child { border-bottom: none; }
+      .log .st { font-weight: 700; flex: none; }
+      .log .st.ok { color: var(--ok); }
+      .log .st.pend { color: var(--warn); }
+      .log .st.fail { color: var(--danger); }
+      .log .hash { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+      footer { margin-top: 22px; text-align: center; color: var(--muted); font-size: 13px; }
+      footer .mono { font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">
+          <h1>Dede<span class="swap">Swap</span></h1>
+          <p>Swap on GIWA Sepolia via the Ammora SDK</p>
+        </div>
+        <span class="pill"><span class="dot" id="rpcDot"></span><span id="rpcLabel">RPC: connecting…</span></span>
+        <span class="pill">GIWA Sepolia · 91342</span>
+        <button class="btn primary" id="connectBtn" type="button">Connect wallet</button>
+      </div>
+
+      <div class="netline" id="netline">
+        <span>Chain check: <span class="mono" id="chainCheck">—</span></span>
+        <span>Latest block: <span class="mono" id="headBlock">—</span></span>
+        <span>Finalized head: <span class="mono" id="finBlock">—</span></span>
+        <span id="walletLine">Wallet: not connected</span>
+      </div>
+
+      <div class="grid">
+        <!-- Venues -->
+        <section class="card" aria-label="Live venues">
+          <div class="head">
+            <h2>Live venues</h2>
+            <span class="small" id="venueCount"></span>
+            <span class="spacer"></span>
+            <button class="btn" id="refreshBtn" type="button">Refresh</button>
+          </div>
+          <p class="small" id="venueStatus">Loading live pool &amp; curve state from GIWA Sepolia…</p>
+          <div id="venueList"></div>
+          <p class="tiny">Pools are discovered on-chain with <span class="mono">discoverAmmoraPools</span> (Ammora SDK 0.3.9, auto-route deployment). Launch curves are read at the finalized head with <span class="mono">AmmoraV4LaunchCurveClient</span>. State refreshes live — nothing here is cached or simulated.</p>
+        </section>
+
+        <!-- Swap -->
+        <section class="card" aria-label="Swap">
+          <div class="head">
+            <h2>Swap</h2>
+            <span class="spacer"></span>
+            <span class="small" id="venueSummary">Pick a venue to start</span>
+          </div>
+
+          <div class="notice warn hidden" id="curveNotice"></div>
+          <div class="notice err hidden" id="errorBox"></div>
+
+          <div class="field">
+            <label for="tokenInSel">You pay</label>
+            <div class="tokenrow">
+              <select id="tokenInSel" disabled></select>
+              <input id="amountIn" type="text" inputmode="decimal" placeholder="0.0" autocomplete="off" disabled />
+            </div>
+            <div class="balrow"><span id="balIn">Balance: —</span><button type="button" id="maxBtn" class="hidden">MAX</button></div>
+          </div>
+
+          <div class="fliprow"><button class="flip" id="flipBtn" type="button" title="Flip direction" aria-label="Flip direction">⇅</button></div>
+
+          <div class="field">
+            <label for="amountOut">You receive (quoted)</label>
+            <div class="tokenrow">
+              <select id="tokenOutSel" disabled></select>
+              <input id="amountOut" type="text" placeholder="0.0" readonly />
+            </div>
+            <div class="balrow"><span id="balOut">Balance: —</span><span id="rateLine"></span></div>
+          </div>
+
+          <div class="field">
+            <label>Slippage tolerance</label>
+            <div class="slip" id="slipRow">
+              <button type="button" data-bps="10">0.1%</button>
+              <button type="button" data-bps="50" class="on">0.5%</button>
+              <button type="button" data-bps="100">1%</button>
+              <input id="slipCustom" type="text" inputmode="decimal" placeholder="Custom %" aria-label="Custom slippage percent" />
+            </div>
+          </div>
+
+          <div id="quoteBox" class="hidden">
+            <hr class="divider" />
+            <dl class="quote" id="quoteDl"></dl>
+          </div>
+
+          <div id="previewBox" class="hidden">
+            <hr class="divider" />
+            <p class="small" style="margin:0 0 8px"><strong>Preview — exact plan your wallet will sign</strong></p>
+            <dl class="quote" id="previewDl"></dl>
+          </div>
+
+          <hr class="divider" />
+          <div style="display:grid; gap:8px">
+            <button class="btn big" id="previewBtn" type="button" disabled>1 · Preview swap</button>
+            <button class="btn big primary" id="swapBtn" type="button" disabled>2 · Swap</button>
+          </div>
+          <p class="small" style="margin:10px 0 0">Preview and send are separate steps. The SDK only plans the transaction — your wallet signs and submits it. Quotes are pinned to the finalized head and expire after ~30 seconds; an expired quote is refreshed before signing, never sent stale.</p>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:16px" aria-label="Transaction status">
+        <div class="head"><h2>Transaction status</h2></div>
+        <p class="small" id="txEmpty">No transaction yet this session. Approvals and swaps you send will appear here with explorer links.</p>
+        <ul class="log" id="txLog"></ul>
+      </section>
+
+      <footer>
+        <p>Built with the Ammora SDK 0.3.9 · GIWA Sepolia (91342) · Testnet — no real funds</p>
+        <p class="mono">RPC https://sepolia-rpc.giwa.io · Explorer https://sepolia-explorer.giwa.io · DedeSwap — Ammora Season 2 Builder mission</p>
+      </footer>
+    </div>
+
+    <script>
+      "use strict";
+      /* DedeSwap — one-page swap exchange on the Ammora SDK 0.3.9.
+         Modules are loaded from esm.sh pinned: @ammora-protocol/sdk@0.3.9
+         with viem pinned to 2.33.0 via the deps parameter, so the page and
+         the SDK share one viem instance. All calls below were verified
+         against the SDK 0.3.9 type definitions and the ammora-examples
+         quickstart sources (safe-swap.ts, quote-swap.ts, swap-native.ts). */
+      var SDK_URL = "https://esm.sh/@ammora-protocol/sdk@0.3.9?deps=viem@2.33.0";
+      var VIEM_URL = "https://esm.sh/viem@2.33.0";
+      var RPC_URL = "https://sepolia-rpc.giwa.io";
+      var EXPLORER = "https://sepolia-explorer.giwa.io";
+      var CHAIN_ID = 91342;
+      var WETH_FALLBACK = "0x4200000000000000000000000000000000000006";
+      var ZERO = "0x0000000000000000000000000000000000000000";
+
+      /* Venues verified live on 2026-11-22 (research probe, SDK reads at
+         block ~41987496). Shown immediately; every value (pair, fee, curve
+         status) is re-read live from chain when the page loads, and the
+         full discoverAmmoraPools scan replaces this list when it lands. */
+      var SEED_VENUES = [
+        { model: "concentrated", pool: "0x562d3bD132C8ec8DA17Cb0A790Dc396a45146D60" },
+        { model: "compounding", pool: "0x10475BF0BE99BfD4f65c97617c1b8EDfa7D27A4f" },
+        { model: "dbc", pool: "0x06029e76D95762A90924C782405146aa1145b822" },
+        { model: "dbc", pool: "0x38709F7B160c7Fbe4140A68759B44eDb4e4B3086" },
+        { model: "dbc", pool: "0x370124353030c8372307357aA2441e112446330F" },
+        { model: "dbc", pool: "0xEDd5464BC48E2900f1054bC262d6a080eEe8D515" },
+        { model: "dbc", pool: "0xEAbFe4aeEb887F5a76B5BA288a2EeAAdBf272677" }
+      ];
+
+      var V = null;      // viem module
+      var S = null;      // sdk module
+      var publicClient = null;
+      var execClient = null;   // public client with 13-confirmation receipt waits (per safe-swap.ts)
+      var walletClient = null;
+      var account = null;
+      var deployment = null;
+      var launch = null, lmm = null, routers = null, WETH = WETH_FALLBACK;
+      var core = null;
+      var swapsClient = null;
+      var venues = [];         // enriched venue objects
+      var selected = null;     // selected venue
+      var tokenMeta = {};      // address(lowercase) -> {symbol, decimals}
+      var slippageBps = 50;
+      var prepared = null;     // PreparedExactInputSwap for current preview
+      var preparedKey = "";
+      var quoteTimer = null;
+      var busy = false;
+
+      function $(id) { return document.getElementById(id); }
+      function lc(a) { return String(a).toLowerCase(); }
+      function short(a) { return a ? a.slice(0, 6) + "…" + a.slice(-4) : "—"; }
+      function fmtUnits(v, d) {
+        try { return V.formatUnits(v, d); } catch (e) { return String(v); }
+      }
+      function fmtNice(v, d) {
+        var s = fmtUnits(v, d);
+        if (s.indexOf(".") >= 0) {
+          var parts = s.split(".");
+          var frac = parts[1].slice(0, 8).replace(/0+$/, "");
+          s = frac ? parts[0] + "." + frac : parts[0];
+        }
+        return s;
+      }
+      function showError(msg) {
+        var b = $("errorBox");
+        if (!msg) { b.classList.add("hidden"); b.textContent = ""; return; }
+        b.textContent = msg; b.classList.remove("hidden");
+      }
+      function errText(e) {
+        if (!e) return "Unknown error";
+        var m = e.shortMessage || e.message || String(e);
+        if (/user rejected|User rejected|4001/.test(m)) return "Request rejected in the wallet — nothing was sent.";
+        return m.length > 420 ? m.slice(0, 420) + "…" : m;
+      }
+      function logTx(status, label, hash, extra) {
+        $("txEmpty").classList.add("hidden");
+        var li = document.createElement("li");
+        var st = document.createElement("span");
+        st.className = "st " + status; st.textContent = label;
+        li.appendChild(st);
+        if (hash) {
+          var a = document.createElement("a");
+          a.href = EXPLORER + "/tx/" + hash; a.target = "_blank"; a.rel = "noopener";
+          a.className = "hash"; a.textContent = hash;
+          li.appendChild(a);
+        }
+        if (extra) { var s = document.createElement("span"); s.textContent = extra; li.appendChild(s); }
+        var log = $("txLog"); log.insertBefore(li, log.firstChild);
+      }
+
+      /* ---------------- token metadata ---------------- */
+      function getMeta(addr) {
+        var k = lc(addr);
+        if (tokenMeta[k]) return Promise.resolve(tokenMeta[k]);
+        if (k === lc(WETH)) { tokenMeta[k] = { symbol: "WETH", decimals: 18 }; return Promise.resolve(tokenMeta[k]); }
+        return Promise.all([
+          publicClient.readContract({ address: addr, abi: V.erc20Abi, functionName: "symbol" }).catch(function () { return "?"; }),
+          publicClient.readContract({ address: addr, abi: V.erc20Abi, functionName: "decimals" }).catch(function () { return 18; })
+        ]).then(function (r) {
+          tokenMeta[k] = { symbol: r[0], decimals: Number(r[1]) };
+          return tokenMeta[k];
+        });
+      }
+
+      /* ---------------- venue enrichment ---------------- */
+      function curveClient(curve) { return new S.AmmoraV4LaunchCurveClient(publicClient, curve, core); }
+
+      function enrichVenue(v) {
+        try { return enrichVenueInner(v); }
+        catch (e) {
+          return Promise.resolve({ model: v.model, pool: v.pool, baseToken: v.baseToken || null, quoteToken: v.quoteToken || null,
+            feeBps: null, status: null, canonicalPool: null, tradeable: v.model !== "dbc",
+            note: "State read failed: " + errText(e) });
+        }
+      }
+      function enrichVenueInner(v) {
+        var out = { model: v.model, pool: v.pool, baseToken: v.baseToken || null, quoteToken: v.quoteToken || null,
+                    feeBps: null, status: null, canonicalPool: null, tradeable: true, note: "" };
+        if (v.model === "dbc") {
+          return S.resolveAmmoraFinalizedHead([publicClient], S.giwaSepoliaAutoRoute.finality).then(function (head) {
+            return curveClient(v.pool).getStateAtBlock(head).then(function (st) {
+              out.baseToken = st.baseToken; out.quoteToken = st.quoteToken;
+              out.feeBps = st.currentFeeBps; out.status = st.status; out.canonicalPool = st.canonicalPool;
+              if (st.status === 1) { out.tradeable = true; }
+              else if (st.status === 2) { out.tradeable = false; out.note = "Ready to migrate — final buy done, awaiting migration. Read-only."; }
+              else if (st.status === 3) { out.tradeable = false; out.note = "Migrated — trade the canonical pool instead."; }
+              else { out.tradeable = false; out.note = "Curve not active (status " + st.status + ")."; }
+              return Promise.all([getMeta(st.baseToken), getMeta(st.quoteToken)]).then(function () { return out; });
+            });
+          }).catch(function (e) { out.note = "Curve state read failed: " + errText(e); out.tradeable = false; return out; });
+        }
+        // concentrated / compounding / almm: read pool state for pair + fee
+        var factory = v.model === "almm" ? null
+          : (v.model === "compounding" ? (launch.compoundingFactory || launch.concentratedFactory) : launch.concentratedFactory);
+        var pm = launch.concentratedPositionManager;
+        var stateP;
+        if (v.model === "almm") {
+          var almm = new S.ALMMClient(publicClient, v.pool, lmm.positionManager, lmm.binLens,
+            { deploymentSource: S.createAmmoraDeploymentSource([deployment]), factoryProfiles: S.giwaSepoliaAutoRoutePoolProfiles });
+          stateP = almm.getPoolState();
+        } else {
+          var damm = new S.DammV2Client(publicClient, v.pool, v.model, factory, pm,
+            { deploymentSource: S.createAmmoraDeploymentSource([deployment]), factoryProfiles: S.giwaSepoliaAutoRoutePoolProfiles });
+          stateP = damm.getPoolState();
+        }
+        return stateP.then(function (st) {
+          out.baseToken = st.baseToken; out.quoteToken = st.quoteToken;
+          if (typeof st.currentFeeBps !== "undefined") out.feeBps = st.currentFeeBps;
+          return Promise.all([getMeta(st.baseToken), getMeta(st.quoteToken)]).then(function () { return out; });
+        }).catch(function () {
+          if (out.baseToken && out.quoteToken) {
+            return Promise.all([getMeta(out.baseToken), getMeta(out.quoteToken)]).then(function () { return out; });
+          }
+          out.note = "Pool state read failed — quoting still runs through AmmoraSwapClient when selected.";
+          return out;
+        });
+      }
+
+      function renderVenues() {
+        var list = $("venueList"); list.innerHTML = "";
+        $("venueCount").textContent = venues.length ? "(" + venues.length + ")" : "";
+        venues.forEach(function (v, i) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "venue" + (selected === v ? " selected" : "");
+          var pair = "? / ?";
+          if (v.baseToken && v.quoteToken) {
+            var mb = tokenMeta[lc(v.baseToken)], mq = tokenMeta[lc(v.quoteToken)];
+            pair = (mb ? mb.symbol : "?") + " / " + (mq ? mq.symbol : "?");
+          }
+          var modelLabel = v.model === "dbc" ? "Launch curve · ALC" : v.model === "almm" ? "ALMM bin pool" : v.model === "concentrated" ? "ARL concentrated" : "ARL compounding";
+          var statusTag = v.model === "dbc"
+            ? (v.status === 1 ? '<span class="tag live">Active</span>' : '<span class="tag ro">' + (v.status === 2 ? "Ready to migrate" : v.status === 3 ? "Migrated" : "Status " + v.status) + "</span>")
+            : '<span class="tag live">Live</span>';
+          var fee = (v.feeBps !== null && typeof v.feeBps !== "undefined") ? "Fee " + (Number(v.feeBps) / 100) + "%" : "Fee —";
+          b.innerHTML = '<span class="row1"><span class="pair"></span></span>' +
+            '<span class="row2"><span class="tag"></span>' + statusTag + '<span></span><span class="addr"></span></span>' +
+            (v.note ? '<span class="row2 warn-note"></span>' : "");
+          b.querySelector(".pair").textContent = pair;
+          b.querySelector(".tag").textContent = modelLabel;
+          b.querySelectorAll(".row2 span")[2].textContent = fee;
+          b.querySelector(".addr").textContent = short(v.pool);
+          if (v.note) { var n = b.querySelector(".warn-note"); n.textContent = v.note; n.style.color = "var(--warn)"; }
+          b.addEventListener("click", function () { selectVenue(v); });
+          list.appendChild(b);
+        });
+      }
+
+      function loadVenues(list, mode) {
+        $("venueStatus").textContent = "Reading live venue state at the finalized head…";
+        var seeds = list || SEED_VENUES;
+        return Promise.all(seeds.map(function (s) {
+          return enrichVenue(s).catch(function () { return null; });
+        })).then(function (rs) {
+          venues = rs.filter(Boolean);
+          renderVenues();
+          $("venueStatus").textContent = mode === "scan"
+            ? "Pool scan complete — " + venues.length + " venues found on-chain."
+            : mode === "refresh"
+            ? "Venue state re-read live — " + venues.length + " venues."
+            : "Showing verified venues — full on-chain pool scan running in the background…";
+          var def = venues.find(function (v) { return lc(v.pool) === lc("0x562d3bD132C8ec8DA17Cb0A790Dc396a45146D60"); }) || venues.find(function (v) { return v.tradeable; }) || venues[0];
+          if (def && !selected) selectVenue(def);
+          return venues;
+        });
+      }
+
+      function runDiscovery() {
+        return S.discoverAmmoraPools({ clients: [publicClient], deployment: S.giwaSepoliaAutoRoute })
+          .then(function (found) {
+            if (!found || !found.length) { $("venueStatus").textContent = "Pool scan returned no extra venues — showing verified venues with live state."; return; }
+            var mapped = found.map(function (p) { return { model: p.model, pool: p.pool, baseToken: p.baseToken, quoteToken: p.quoteToken }; });
+            return loadVenues(mapped, "scan").then(function () {
+              if (selected) { var again = venues.find(function (v) { return lc(v.pool) === lc(selected.pool); }); if (again) selectVenue(again); }
+            });
+          })
+          .catch(function () { $("venueStatus").textContent = "Full pool scan did not complete (RPC limits) — verified venues above are live and tradeable."; });
+      }
+
+      /* ---------------- selection + swap form ---------------- */
+      function tokenOptions(v) {
+        var opts = [];
+        var base = { addr: v.baseToken, meta: tokenMeta[lc(v.baseToken)] };
+        var quote = { addr: v.quoteToken, meta: tokenMeta[lc(v.quoteToken)] };
+        if (!base.meta || !quote.meta) return opts;
+        if (v.model === "concentrated" || v.model === "compounding") {
+          // native ETH input is supported for concentrated/compounding via the native router
+          if (lc(v.quoteToken) === lc(WETH) || lc(v.baseToken) === lc(WETH)) {
+            opts.push({ id: "native", label: "ETH (native)", addr: WETH, decimals: 18, symbol: "ETH", inputAsset: "native" });
+          }
+        }
+        opts.push({ id: "erc20:" + lc(base.addr), label: base.meta.symbol, addr: base.addr, decimals: base.meta.decimals, symbol: base.meta.symbol, inputAsset: "erc20" });
+        opts.push({ id: "erc20:" + lc(quote.addr), label: quote.meta.symbol, addr: quote.addr, decimals: quote.meta.decimals, symbol: quote.meta.symbol, inputAsset: "erc20" });
+        return opts;
+      }
+
+      function currentInOpt() {
+        var sel = $("tokenInSel"); if (!sel.value) return null;
+        return (selected._opts || []).find(function (o) { return o.id === sel.value; }) || null;
+      }
+      function currentOutOpt() {
+        if (!selected || !currentInOpt()) return null;
+        var inOpt = currentInOpt();
+        var other = lc(inOpt.addr) === lc(selected.baseToken)
+          ? { addr: selected.quoteToken } : { addr: selected.baseToken };
+        var m = tokenMeta[lc(other.addr)];
+        return { addr: other.addr, symbol: m ? m.symbol : "?", decimals: m ? m.decimals : 18 };
+      }
+
+      function selectVenue(v) {
+        selected = v; prepared = null; preparedKey = "";
+        renderVenues();
+        var mb = v.baseToken ? tokenMeta[lc(v.baseToken)] : null;
+        var mq = v.quoteToken ? tokenMeta[lc(v.quoteToken)] : null;
+        $("venueSummary").textContent = (mb && mq) ? mb.symbol + " / " + mq.symbol + " · " + short(v.pool) : short(v.pool);
+        var notice = $("curveNotice");
+        if (!v.tradeable) {
+          notice.textContent = v.note || "This venue is read-only.";
+          if (v.model === "dbc" && v.status === 3 && v.canonicalPool && lc(v.canonicalPool) !== ZERO) {
+            var target = venues.find(function (x) { return lc(x.pool) === lc(v.canonicalPool); });
+            if (target) {
+              notice.textContent = "This curve has migrated. Its canonical pool is in the list — opening it for you.";
+              notice.classList.remove("hidden");
+              setTimeout(function () { selectVenue(target); }, 600);
+              return;
+            }
+            notice.textContent = "This curve has migrated to canonical pool " + v.canonicalPool + " — that pool is not in the current list yet.";
+          }
+          notice.classList.remove("hidden");
+        } else notice.classList.add("hidden");
+
+        v._opts = tokenOptions(v);
+        var inSel = $("tokenInSel"), outSel = $("tokenOutSel");
+        inSel.innerHTML = ""; outSel.innerHTML = "";
+        v._opts.forEach(function (o) {
+          var op = document.createElement("option"); op.value = o.id; op.textContent = o.label; inSel.appendChild(op);
+        });
+        // default: pay WETH (or native ETH) like the verified quickstart quotes
+        var def = v._opts.find(function (o) { return o.inputAsset === "native"; }) ||
+                  v._opts.find(function (o) { return lc(o.addr) === lc(v.quoteToken); }) || v._opts[0];
+        if (def) inSel.value = def.id;
+        syncOutSelect();
+        var canTrade = v.tradeable && v._opts.length > 0;
+        inSel.disabled = !canTrade; $("amountIn").disabled = !canTrade;
+        if (!$("amountIn").value) $("amountIn").value = "0.01";
+        clearQuote(); refreshBalances(); updateButtons();
+      }
+
+      function syncOutSelect() {
+        var outSel = $("tokenOutSel"); outSel.innerHTML = "";
+        var o = currentOutOpt(); if (!o) return;
+        var op = document.createElement("option"); op.value = lc(o.addr); op.textContent = o.symbol;
+        outSel.appendChild(op);
+      }
+
+      function refreshBalances() {
+        var inOpt = currentInOpt(), outOpt = currentOutOpt();
+        if (!account) { $("balIn").textContent = "Balance: connect wallet"; $("balOut").textContent = "Balance: —"; return; }
+        if (inOpt) {
+          if (inOpt.inputAsset === "native") {
+            publicClient.getBalance({ address: account }).then(function (b) {
+              $("balIn").textContent = "Balance: " + fmtNice(b, 18) + " ETH";
+              $("maxBtn").classList.remove("hidden"); $("maxBtn").dataset.raw = b.toString(); $("maxBtn").dataset.dec = "18";
+            }).catch(function () {});
+          } else {
+            publicClient.readContract({ address: inOpt.addr, abi: V.erc20Abi, functionName: "balanceOf", args: [account] }).then(function (b) {
+              $("balIn").textContent = "Balance: " + fmtNice(b, inOpt.decimals) + " " + inOpt.symbol;
+              $("maxBtn").classList.remove("hidden"); $("maxBtn").dataset.raw = b.toString(); $("maxBtn").dataset.dec = String(inOpt.decimals);
+            }).catch(function () {});
+          }
+        }
+        if (outOpt) {
+          publicClient.readContract({ address: outOpt.addr, abi: V.erc20Abi, functionName: "balanceOf", args: [account] }).then(function (b) {
+            $("balOut").textContent = "Balance: " + fmtNice(b, outOpt.decimals) + " " + outOpt.symbol;
+          }).catch(function () {});
+        }
+      }
+
+      /* ---------------- quoting / preview ---------------- */
+      function parseAmount() {
+        var inOpt = currentInOpt(); if (!inOpt) return null;
+        var raw = $("amountIn").value.trim();
+        if (!/^\d+(\.\d+)?$/.test(raw)) return null;
+        try {
+          var a = V.parseUnits(raw, inOpt.decimals);
+          return a > 0n ? a : null;
+        } catch (e) { return null; }
+      }
+      function inputKey() {
+        var inOpt = currentInOpt(); if (!selected || !inOpt) return "";
+        return [lc(selected.pool), inOpt.id, $("amountIn").value.trim(), slippageBps, account || ""].join("|");
+      }
+
+      function planCurveAtBlock(curve, tokenIn, amountIn, recipient, slipBps) {
+        // Verified pattern from ammora-examples src/quickstart/safe-swap.ts:
+        // explicit-block quote + swapExactInput calldata + curve approval.
+        return S.resolveAmmoraFinalizedHead([publicClient], S.giwaSepoliaAutoRoute.finality).then(function (blockNumber) {
+          return publicClient.getBlock({ blockNumber: blockNumber }).then(function (block) {
+            return S.verifyAmmoraV4CoreAtBlock(publicClient, core, blockNumber).then(function () {
+              var sdk = new S.AmmoraV4LaunchCurveClient(publicClient, curve, core);
+              return sdk.getStateAtBlock(blockNumber).then(function (state) {
+                return publicClient.readContract({ address: core.launchFactory, abi: S.ammoraLaunchFactoryV4Abi, functionName: "tokenForCurve", args: [curve], blockNumber: blockNumber }).then(function (factoryToken) {
+                  if (factoryToken === ZERO || lc(factoryToken) !== lc(state.baseToken) ||
+                      lc(state.feePolicy) !== lc(core.feePolicy) || state.feePolicyVersion !== S.AMMORA_FEE_POLICY_VERSION) {
+                    throw new Error("Curve is not bound to the reviewed V4 factory and fee policy.");
+                  }
+                  if (state.status !== 1) throw new Error("Curve status " + state.status + " is not active.");
+                  var baseForQuote = lc(tokenIn) === lc(state.baseToken);
+                  if (!baseForQuote && lc(tokenIn) !== lc(state.quoteToken)) throw new Error("Token in is not a curve asset.");
+                  return sdk.quoteExactInputAtBlock(amountIn, baseForQuote, blockNumber).then(function (quote) {
+                    var fill = S.classifyAmmoraV4ExactInputFill(quote, baseForQuote);
+                    if (fill.kind !== "full") {
+                      throw new Error(fill.kind === "graduation-boundary"
+                        ? "This amount reaches the graduation boundary — DedeSwap only sends ordinary full fills. Reduce the amount."
+                        : "This amount only fills partially on the curve (" + fill.kind + "). Reduce the amount so it fills in full.");
+                    }
+                    var minimumAmountOut = quote.amountOut * BigInt(10000 - slipBps) / 10000n;
+                    if (minimumAmountOut === 0n) throw new Error("Minimum output rounds to zero — increase the amount.");
+                    var deadline = block.timestamp + 1200n;
+                    var data = V.encodeFunctionData({ abi: S.ammoraLaunchPoolV4Abi, functionName: "swapExactInput",
+                      args: [amountIn, minimumAmountOut, baseForQuote, false, recipient, deadline] });
+                    return {
+                      transaction: { to: curve, data: data },
+                      approvalRequirements: [{ token: tokenIn, spender: curve, amount: amountIn }],
+                      quoteBlockNumber: blockNumber,
+                      quote: {
+                        model: "dbc", pool: curve, tokenIn: tokenIn, inputAsset: "erc20",
+                        tokenOut: baseForQuote ? state.quoteToken : state.baseToken,
+                        amountIn: amountIn, fillableAmountIn: quote.amountIn, remainderAmountIn: quote.amountLeft,
+                        expectedAmountOut: quote.amountOut, minimumAmountOut: minimumAmountOut,
+                        feeAmount: quote.fee, feeToken: null, priceImpactBps: null, recipient: recipient,
+                        details: { snapshotBlock: blockNumber.toString(), policy: "finalized head" }
+                      }
+                    };
+                  });
+                });
+              });
+            });
+          });
+        });
+      }
+
+      function buildPrepared() {
+        var inOpt = currentInOpt();
+        var amountIn = parseAmount();
+        if (!selected || !inOpt || !amountIn) return Promise.reject(new Error("Enter an amount first."));
+        if (!account) return Promise.reject(new Error("Connect your wallet first — quotes are planned for your address."));
+        var payer = account, recipient = account;
+        if (selected.model === "dbc") {
+          return S.PreparedExactInputSwap.create({
+            client: execClient, chainId: CHAIN_ID, payer: payer, quoteTtlMs: 30000,
+            createPlan: function () { return planCurveAtBlock(selected.pool, inOpt.addr, amountIn, recipient, slippageBps); }
+          });
+        }
+        if (selected.model === "concentrated" || selected.model === "compounding") {
+          return S.PreparedExactInputSwap.create({
+            client: execClient, chainId: CHAIN_ID, payer: payer, quoteTtlMs: 30000,
+            createPlan: function () {
+              return S.resolveAmmoraFinalizedHead([publicClient], S.giwaSepoliaAutoRoute.finality).then(function (head) {
+                return swapsClient.prepareExactIn({
+                  model: selected.model, pool: selected.pool, tokenIn: inOpt.addr,
+                  inputAsset: inOpt.inputAsset, amountIn: amountIn, payer: payer, recipient: recipient,
+                  slippageBps: slippageBps, executionMode: "direct-wallet", quoteBlockNumber: head
+                }).then(function (planned) {
+                  return { transaction: planned.transaction, approvalRequirements: planned.approvalRequirements,
+                           quoteBlockNumber: planned.quote.quoteBlockNumber, quote: planned.quote };
+                });
+              });
+            }
+          });
+        }
+        // almm (and any other model): plain unified path
+        return swapsClient.prepareExactIn({
+          model: selected.model, pool: selected.pool, tokenIn: inOpt.addr,
+          inputAsset: inOpt.inputAsset, amountIn: amountIn, payer: payer, recipient: recipient,
+          slippageBps: slippageBps, executionMode: "direct-wallet"
+        });
+      }
+
+      function clearQuote() {
+        $("quoteBox").classList.add("hidden");
+        $("previewBox").classList.add("hidden");
+        $("amountOut").value = ""; $("rateLine").textContent = "";
+        prepared = null; preparedKey = "";
+        if (quoteTimer) { clearInterval(quoteTimer); quoteTimer = null; }
+        updateButtons();
+      }
+
+      function renderQuote(q) {
+        var inOpt = currentInOpt(), outOpt = currentOutOpt();
+        if (!inOpt || !outOpt) return;
+        $("amountOut").value = fmtNice(q.expectedAmountOut, outOpt.decimals);
+        var rate = Number(q.expectedAmountOut) / Math.pow(10, outOpt.decimals) / (Number(q.amountIn) / Math.pow(10, inOpt.decimals));
+        $("rateLine").textContent = "1 " + inOpt.symbol + " ≈ " + (rate >= 1 ? rate.toFixed(6) : rate.toPrecision(4)) + " " + outOpt.symbol;
+        var rows = [
+          ["Expected out", fmtNice(q.expectedAmountOut, outOpt.decimals) + " " + outOpt.symbol],
+          ["Minimum received", fmtNice(q.minimumAmountOut, outOpt.decimals) + " " + outOpt.symbol],
+          ["Slippage", (slippageBps / 100) + "%"]
+        ];
+        if (q.feeAmount !== null && typeof q.feeAmount !== "undefined") {
+          var feeMeta = q.feeToken ? tokenMeta[lc(q.feeToken)] : null;
+          var feeDec = feeMeta ? feeMeta.decimals : inOpt.decimals;
+          var feeSym = feeMeta ? feeMeta.symbol : inOpt.symbol;
+          rows.push(["Fee", fmtNice(q.feeAmount, feeDec) + " " + feeSym]);
+        }
+        if (q.priceImpactBps !== null && typeof q.priceImpactBps !== "undefined") {
+          rows.push(["Price impact", (Number(q.priceImpactBps) / 100).toFixed(2) + "%"]);
+        }
+        if (q.remainderAmountIn && q.remainderAmountIn > 0n) {
+          rows.push(["Unfilled remainder", fmtNice(q.remainderAmountIn, inOpt.decimals) + " " + inOpt.symbol]);
+        }
+        rows.push(["Quote block", String(q.quoteBlockNumber)]);
+        rows.push(["Quote expires", ""]);
+        var dl = $("quoteDl"); dl.innerHTML = "";
+        rows.forEach(function (r) {
+          var dt = document.createElement("dt"); dt.textContent = r[0];
+          var dd = document.createElement("dd"); dd.textContent = r[1];
+          if (r[0] === "Quote expires") dd.id = "expCell";
+          dl.appendChild(dt); dl.appendChild(dd);
+        });
+        $("quoteBox").classList.remove("hidden");
+        if (quoteTimer) clearInterval(quoteTimer);
+        quoteTimer = setInterval(function () {
+          var cell = $("expCell"); if (!cell || !prepared) return;
+          var left = Math.max(0, Math.round((prepared.quote.expiresAtMs - Date.now()) / 1000));
+          cell.textContent = prepared.isExpired() ? "expired — will refresh before signing" : left + "s";
+        }, 500);
+      }
+
+      function renderPreview(p) {
+        var inOpt = currentInOpt();
+        var tx = p.transaction;
+        var rows = [
+          ["Contract (to)", tx.to],
+          ["Value", tx.value ? fmtNice(tx.value, 18) + " ETH" : "0 ETH"],
+          ["Calldata", tx.data ? (tx.data.length / 2 - 1) + " bytes" : "—"],
+          ["Recipient", account]
+        ];
+        var dl = $("previewDl"); dl.innerHTML = "";
+        rows.forEach(function (r) {
+          var dt = document.createElement("dt"); dt.textContent = r[0];
+          var dd = document.createElement("dd"); dd.textContent = r[1];
+          dl.appendChild(dt); dl.appendChild(dd);
+        });
+        var reqs = p.approvalRequirements || [];
+        if (!reqs.length) {
+          var dt = document.createElement("dt"); dt.textContent = "Approval";
+          var dd = document.createElement("dd"); dd.textContent = "None needed (native input or allowance already sufficient at plan time)";
+          dl.appendChild(dt); dl.appendChild(dd);
+        } else {
+          reqs.forEach(function (r, i) {
+            var m = tokenMeta[lc(r.token)];
+            var dt = document.createElement("dt"); dt.textContent = "Approval " + (i + 1);
+            var dd = document.createElement("dd");
+            dd.textContent = "Approve " + fmtNice(r.amount, m ? m.decimals : 18) + " " + (m ? m.symbol : "") + " to " + short(r.spender) + " — checked & sent by the SDK at execution";
+            dl.appendChild(dt); dl.appendChild(dd);
+          });
+        }
+        $("previewBox").classList.remove("hidden");
+      }
+
+      function doPreview() {
+        if (busy) return;
+        showError("");
+        busy = true; updateButtons();
+        buildPrepared().then(function (p) {
+          prepared = p; preparedKey = inputKey();
+          renderQuote(p.quote); renderPreview(p);
+        }).catch(function (e) { showError(errText(e)); })
+          .finally(function () { busy = false; updateButtons(); });
+      }
+
+      function updateButtons() {
+        var canQuote = !!selected && selected.tradeable && !!parseAmount() && !busy;
+        $("previewBtn").disabled = !canQuote;
+        var canSwap = !!prepared && preparedKey === inputKey() && !!account && !busy;
+        $("swapBtn").disabled = !canSwap;
+        $("swapBtn").textContent = account ? "2 · Swap" : "2 · Swap (connect wallet first)";
+      }
+
+      function doSwap() {
+        if (!prepared || busy) return;
+        if (!walletClient || !account) { showError("Connect your wallet first."); return; }
+        showError(""); busy = true; updateButtons();
+        logTx("pend", "Sending", null, "Quote block " + String(prepared.quote.quoteBlockNumber) + " — follow the prompts in your wallet.");
+        prepared.execute(walletClient, {
+          autoRefresh: true,
+          onStatus: function (st) {
+            if (st.type === "quote-refreshed") logTx("pend", "Quote refreshed", null, "New block " + String(st.quote.quoteBlockNumber));
+            else if (st.type === "approval-requested") logTx("pend", "Approval requested", null, "Confirm the token approval in your wallet.");
+            else if (st.type === "approval-submitted") logTx("pend", "Approval submitted", st.hash, "Waiting for confirmation…");
+            else if (st.type === "approval-confirmed") logTx("ok", "Approval confirmed", st.hash, "Block " + String(st.blockNumber));
+            else if (st.type === "swap-requested") logTx("pend", "Swap requested", null, "Confirm the swap in your wallet.");
+            else if (st.type === "swap-submitted") logTx("pend", "Swap submitted", st.hash, "Waiting for confirmation…");
+            else if (st.type === "swap-confirmed") logTx("ok", "Swap confirmed", st.hash, "Block " + String(st.blockNumber));
+          }
+        }).then(function (res) {
+          var outOpt = currentOutOpt();
+          var got = (res.amountReceived !== null && res.amountReceived !== undefined && outOpt)
+            ? " · Received " + fmtNice(res.amountReceived, outOpt.decimals) + " " + outOpt.symbol + " (balance-verified)"
+            : "";
+          logTx(res.receipt.status === "success" ? "ok" : "fail",
+                res.receipt.status === "success" ? "Done" : "Reverted", res.hash,
+                "Block " + String(res.receipt.blockNumber) + got);
+          prepared = null; preparedKey = "";
+          $("previewBox").classList.add("hidden");
+          refreshBalances(); refreshHeads();
+        }).catch(function (e) {
+          logTx("fail", "Failed", null, errText(e));
+          showError(errText(e));
+        }).finally(function () { busy = false; updateButtons(); });
+      }
+
+      /* ---------------- wallet ---------------- */
+      function setWalletUI() {
+        var btn = $("connectBtn");
+        if (account) {
+          btn.textContent = short(account);
+          $("walletLine").innerHTML = "Wallet: <span class='mono'>" + account + "</span>";
+        } else {
+          btn.textContent = "Connect wallet";
+          $("walletLine").textContent = "Wallet: not connected";
+        }
+      }
+      function connectWallet() {
+        showError("");
+        if (!V || !publicClient) { showError("Still loading the Ammora SDK — give it a moment, then tap Connect wallet again."); return; }
+        if (!window.ethereum) {
+          showError("No wallet found in this browser. Open DedeSwap inside the MetaMask or OKX wallet browser, or in a desktop browser with the wallet extension installed — then tap Connect wallet.");
+          return;
+        }
+        var provider = window.ethereum;
+        provider.request({ method: "eth_requestAccounts" }).then(function (accs) {
+          if (!accs || !accs.length) throw new Error("Wallet returned no account.");
+          account = V.getAddress(accs[0]);
+          return provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + CHAIN_ID.toString(16) }] })
+            .catch(function (e) {
+              if (e && e.code === 4902) {
+                return provider.request({ method: "wallet_addEthereumChain", params: [{
+                  chainId: "0x" + CHAIN_ID.toString(16), chainName: "GIWA Sepolia",
+                  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+                  rpcUrls: [RPC_URL], blockExplorerUrls: [EXPLORER]
+                }] });
+              }
+              throw e;
+            });
+        }).then(function () {
+          walletClient = V.createWalletClient({ account: account, chain: publicClient.chain, transport: V.custom(window.ethereum) });
+          return walletClient.getChainId();
+        }).then(function (cid) {
+          if (cid !== CHAIN_ID) throw new Error("Wallet is on chain " + cid + ", not GIWA Sepolia (" + CHAIN_ID + "). Switch networks and try again.");
+          if (publicClient.chain && publicClient.chain.id !== CHAIN_ID) throw new Error("Public client chain mismatch.");
+          setWalletUI(); refreshBalances(); clearQuote(); updateButtons();
+          logTx("ok", "Wallet connected", null, short(account) + " on GIWA Sepolia");
+        }).catch(function (e) { showError(errText(e)); });
+      }
+
+      /* ---------------- boot ---------------- */
+      function refreshHeads() {
+        if (!publicClient) return;
+        publicClient.getBlockNumber().then(function (b) { $("headBlock").textContent = String(b); }).catch(function () {});
+        S.resolveAmmoraFinalizedHead([publicClient], S.giwaSepoliaAutoRoute.finality).then(function (h) { $("finBlock").textContent = String(h); }).catch(function () {});
+      }
+
+      function boot() {
+        Promise.all([import(VIEM_URL), import(SDK_URL)]).then(function (mods) {
+          V = mods[0]; S = mods[1];
+          var GIWA = V.defineChain({ id: CHAIN_ID, name: "GIWA Sepolia",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: { default: { http: [RPC_URL] } },
+            blockExplorers: { default: { name: "Explorer", url: EXPLORER } } });
+          publicClient = V.createPublicClient({ chain: GIWA, transport: V.http(RPC_URL, { batch: true, retryCount: 2 }) });
+          if (!publicClient.chain || publicClient.chain.id !== CHAIN_ID) throw new Error("Public client chain id mismatch.");
+          // safe-swap.ts pattern: receipt waits enforce the finalized confirmation window
+          execClient = publicClient.extend(function () { return {
+            waitForTransactionReceipt: function (req) {
+              return publicClient.waitForTransactionReceipt(Object.assign({}, req, { confirmations: 13, retryCount: 0, timeout: 120000, pollingInterval: 6000 }));
+            } }; });
+          return publicClient.getChainId();
+        }).then(function (cid) {
+          if (cid !== CHAIN_ID) throw new Error("RPC reports chain " + cid + ", expected 91342.");
+          $("rpcDot").className = "dot on"; $("rpcLabel").textContent = "RPC: live";
+          $("chainCheck").textContent = "publicClient.chain.id = 91342 ✓ · RPC chainId = 91342 ✓";
+          deployment = S.giwaSepoliaAutoRouteDeployment;
+          launch = deployment.contracts.launch; lmm = deployment.contracts.liquidityMarketMaker; routers = deployment.contracts.routers;
+          WETH = (deployment.contracts.tokens && deployment.contracts.tokens.wrappedNative) || WETH_FALLBACK;
+          core = { configRegistry: launch.configRegistry, launchFactory: launch.factory,
+                   graduationAdapter: launch.graduationAdapter, feePolicy: launch.feePolicy };
+          return S.AmmoraSwapClient.create(execClient, {
+            deploymentCatalog: { 91342: deployment }, factoryProfiles: S.giwaSepoliaAutoRoutePoolProfiles });
+        }).then(function (sc) {
+          swapsClient = sc;
+          refreshHeads(); setInterval(refreshHeads, 30000);
+          return loadVenues(null, "seed");
+        }).then(function () { runDiscovery(); })
+        .catch(function (e) {
+          $("rpcDot").className = "dot bad"; $("rpcLabel").textContent = "RPC: error";
+          $("chainCheck").innerHTML = "<span class='err'>" + errText(e) + "</span>";
+          $("venueStatus").textContent = "Could not load the Ammora SDK or reach GIWA Sepolia: " + errText(e);
+        });
+      }
+
+      /* ---------------- events ---------------- */
+      $("connectBtn").addEventListener("click", connectWallet);
+      $("refreshBtn").addEventListener("click", function () { selected = null; loadVenues(venues.length ? venues.map(function (v) { return { model: v.model, pool: v.pool, baseToken: v.baseToken, quoteToken: v.quoteToken }; }) : null, "refresh").then(runDiscovery); });
+      $("tokenInSel").addEventListener("change", function () { syncOutSelect(); clearQuote(); refreshBalances(); });
+      $("amountIn").addEventListener("input", function () { if (prepared) { prepared = null; preparedKey = ""; $("previewBox").classList.add("hidden"); $("quoteBox").classList.add("hidden"); } updateButtons(); });
+      $("flipBtn").addEventListener("click", function () {
+        if (!selected) return;
+        var inOpt = currentInOpt(); if (!inOpt) return;
+        var target = lc(inOpt.addr) === lc(selected.baseToken) ? selected.quoteToken : selected.baseToken;
+        var want = (selected._opts || []).find(function (o) { return o.inputAsset === "erc20" && lc(o.addr) === lc(target); });
+        if (want) { $("tokenInSel").value = want.id; syncOutSelect(); clearQuote(); refreshBalances(); }
+      });
+      $("maxBtn").addEventListener("click", function () {
+        var raw = $("maxBtn").dataset.raw, dec = Number($("maxBtn").dataset.dec || 18);
+        if (raw) { $("amountIn").value = fmtUnits(BigInt(raw), dec); if (prepared) { prepared = null; preparedKey = ""; $("previewBox").classList.add("hidden"); } updateButtons(); }
+      });
+      $("slipRow").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-bps]"); if (!b) return;
+        slippageBps = Number(b.dataset.bps);
+        $("slipCustom").value = "";
+        Array.prototype.forEach.call($("slipRow").querySelectorAll("button[data-bps]"), function (x) { x.classList.toggle("on", x === b); });
+        if (prepared) { prepared = null; preparedKey = ""; $("previewBox").classList.add("hidden"); $("quoteBox").classList.add("hidden"); }
+        updateButtons();
+      });
+      $("slipCustom").addEventListener("input", function () {
+        var v = parseFloat($("slipCustom").value);
+        if (isFinite(v) && v > 0 && v <= 10) {
+          slippageBps = Math.round(v * 100);
+          Array.prototype.forEach.call($("slipRow").querySelectorAll("button[data-bps]"), function (x) { x.classList.remove("on"); });
+          if (prepared) { prepared = null; preparedKey = ""; $("previewBox").classList.add("hidden"); $("quoteBox").classList.add("hidden"); }
+          updateButtons();
+        }
+      });
+      $("previewBtn").addEventListener("click", doPreview);
+      $("swapBtn").addEventListener("click", doSwap);
+      if (window.ethereum && window.ethereum.on) {
+        window.ethereum.on("accountsChanged", function (accs) {
+          account = accs && accs.length ? accs[0] : null;
+          walletClient = null; setWalletUI(); clearQuote(); refreshBalances();
+        });
+        window.ethereum.on("chainChanged", function () { window.location.reload(); });
+      }
+      boot();
+    </script>
+  </body>
+</html>
